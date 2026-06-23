@@ -471,6 +471,10 @@ void Player::playback_loop() {
                 std::lock_guard lock(state_mutex_);
                 finished_ = true;
                 state_.finished = true;
+                
+                if (stop_requested_) {
+                    break;
+                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
@@ -495,6 +499,10 @@ void Player::playback_loop() {
 
         update_spectrum(buffer.data(), static_cast<std::size_t>(frames_rendered * 2));
         update_waveform(buffer.data(), static_cast<std::size_t>(frames_rendered * 2));
+
+        if (stop_requested_) {
+            break;
+        }
 
         PaError err = Pa_WriteStream(stream_, buffer.data(), frames_rendered);
         if (err != paNoError) {
