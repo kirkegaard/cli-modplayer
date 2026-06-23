@@ -102,7 +102,6 @@ void SimpleUi::run() {
             else if (c == 'h')
                 player_.jump_to_order(-1);
         }
-        if (state.finished) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << "\n\nPlayback finished.\n";

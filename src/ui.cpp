@@ -165,12 +165,6 @@ void Ui::run() {
         update_history(last_state_);
         update_visualizer_peaks(last_state_, static_cast<int>(last_state_.channels.size()));
 
-        if (last_state_.finished && running_) {
-            running_ = false;
-            loop_running = false;
-            screen.Exit();
-        }
-
         return render(last_state_);
     });
 
