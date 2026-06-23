@@ -147,7 +147,7 @@ void Ui::reset_ui_state() {
     last_state_ = TransportState{};
 }
 
-void Ui::run() {
+bool Ui::run() {
     using namespace std::chrono_literals;
 
     reset_ui_state();
@@ -165,6 +165,13 @@ void Ui::run() {
         update_history(last_state_);
         update_visualizer_peaks(last_state_, static_cast<int>(last_state_.channels.size()));
 
+        if (last_state_.finished && running_) {
+            open_new_file_ = true;
+            running_ = false;
+            loop_running = false;
+            screen.Exit();
+        }
+
         return render(last_state_);
     });
 
@@ -175,6 +182,14 @@ void Ui::run() {
 
         if (event == ftxui::Event::Character('q') || event == ftxui::Event::Character('Q') ||
             event == ftxui::Event::Escape) {
+            running_ = false;
+            loop_running = false;
+            screen.Exit();
+            return true;
+        }
+
+        if (event == ftxui::Event::Character('o')) {
+            open_new_file_ = true;
             running_ = false;
             loop_running = false;
             screen.Exit();
@@ -403,7 +418,7 @@ void Ui::run() {
                 export_total_ = 0;
                 export_error_.clear();
                 
-                std::thread([this, &refresh]() {
+                std::thread([this]() {
                     ExportOptions options;
                     options.sample_rate = 48000;
                     options.channels = 2;
@@ -465,6 +480,7 @@ void Ui::run() {
     }
 
     running_ = false;
+    return open_new_file_;
 }
 
 void Ui::update_history(const TransportState &state) {
@@ -1001,7 +1017,7 @@ ftxui::Element Ui::render_status_bar() {
 
 ftxui::Element Ui::render_footer() const {
     using namespace ftxui;
-    auto shortcuts = text("Space: Play/Pause  [ / ] ±8 rows  ←/→ Orders  PgUp/PgDn Channels  +/- Volume  M Mute  E Effects  X Export  N Info  A About  Q Quit") |
+    auto shortcuts = text("Space: Play/Pause  [ / ] ±8 rows  ←/→ Orders  PgUp/PgDn Channels  +/- Volume  M Mute  E Effects  X Export  N Info  A About  O Open  Q Quit") |
                      color(kTheme.text_dim) | dim;
     return hbox({shortcuts}) | bgcolor(kTheme.background) | color(kTheme.text);
 }

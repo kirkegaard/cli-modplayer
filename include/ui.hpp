@@ -25,7 +25,7 @@ public:
     explicit Ui(Player &player, Config &config, const std::string& module_filename = "output");
     ~Ui();
 
-    void run();
+    bool run();
 
 private:
     void reset_ui_state();
@@ -53,6 +53,7 @@ private:
     Player &player_;
     Config &config_;
     bool running_{true};
+    bool open_new_file_{false};
     bool info_overlay_{false};
     int info_scroll_position_{0};
     bool about_overlay_{false};

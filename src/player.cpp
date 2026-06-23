@@ -463,7 +463,6 @@ void Player::playback_loop() {
         }
 
         if (frames_rendered <= 0) {
-            // Reset to the start of the song and auto-pause
             {
                 std::lock_guard module_lock(module_mutex_);
                 module_->set_position_order_row(0, 0);
@@ -472,10 +471,9 @@ void Player::playback_loop() {
                 std::lock_guard lock(state_mutex_);
                 finished_ = true;
                 state_.finished = true;
-                paused_ = true;
-                state_.paused = true;
             }
-            continue;  // Continue the loop (will wait on pause condition)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
         }
 
         double current_volume = 0.0;
