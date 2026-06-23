@@ -68,6 +68,7 @@ target_link_libraries(cli-modplayer
 
 if(FLAC_FOUND)
     target_link_libraries(cli-modplayer PRIVATE ${FLAC_LIBRARIES})
+    target_link_directories(cli-modplayer PRIVATE ${FLAC_LIBRARY_DIRS})
     target_compile_definitions(cli-modplayer PRIVATE HAVE_FLAC)
     message(STATUS "FLAC support enabled")
 else()
@@ -76,6 +77,7 @@ endif()
 
 if(LAME_FOUND)
     target_link_libraries(cli-modplayer PRIVATE ${LAME_LIBRARIES})
+    target_link_directories(cli-modplayer PRIVATE ${LAME_LIBRARY_DIRS})
     target_compile_definitions(cli-modplayer PRIVATE HAVE_LAME)
     message(STATUS "MP3 support enabled")
 else()
