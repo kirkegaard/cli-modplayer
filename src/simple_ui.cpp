@@ -42,7 +42,8 @@ bool kbhit() {
 }
 }
 
-void SimpleUi::run() {
+UiAction SimpleUi::run() {
+    UiAction action = UiAction::Quit;
     std::cout << "cli-modplayer v1.3.0 | github.com/Master290/cli-modplayer\n";
     std::cout << "─────────────────────────────────────────────────────────────\n";
     std::cout << "Title:   " << player_.title() << "\n";
@@ -57,10 +58,14 @@ void SimpleUi::run() {
     std::cout << "Patterns: " << player_.num_patterns() << " | Orders: " << player_.num_orders() << "\n";
     std::cout << "Instruments: " << player_.num_instruments() << " | Samples: " << player_.num_samples() << "\n";
     std::cout << "─────────────────────────────────────────────────────────────\n";
-    std::cout << "[Space] pause  [←/→] skip order  [Q] quit\n\n";
+    std::cout << "[Space] pause  [←/→] skip order  [</>] prev/next track  [Q] quit\n\n";
     
     while (running_) {
         auto state = player_.snapshot();
+        if (state.finished) {
+            action = UiAction::NextTrack;
+            break;
+        }
         double pos = state.position_seconds;
         double dur = player_.duration_seconds();
         int percent = dur > 0.0 ? static_cast<int>(pos / dur * 100.0) : 0;
@@ -87,8 +92,18 @@ void SimpleUi::run() {
             int c = getch();
             if (c == ' ')
                 player_.toggle_pause();
-            else if (c == 'q' || c == 'Q')
+            else if (c == 'q' || c == 'Q') {
+                action = UiAction::Quit;
                 break;
+            }
+            else if (c == '>' || c == '.') {
+                action = UiAction::NextTrack;
+                break;
+            }
+            else if (c == '<' || c == ',') {
+                action = UiAction::PrevTrack;
+                break;
+            }
             else if (c == 27) {
                 getch();
                 int arrow = getch();
@@ -105,6 +120,7 @@ void SimpleUi::run() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << "\n\nPlayback finished.\n";
+    return action;
 }
 
 }

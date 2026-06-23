@@ -34,12 +34,14 @@ std::string format_file_size(std::size_t bytes) {
 
 }
 
-std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::path& start_dir) {
+FileBrowserResult run_file_browser(const std::filesystem::path& start_dir) {
     using namespace ftxui;
     
     FileBrowser browser(start_dir);
-    std::optional<std::filesystem::path> selected_file;
+    FileBrowserResult result;
     bool quit = false;
+    int queued_count = 0;
+    std::string status_message;
     
     auto screen = ScreenInteractive::Fullscreen();
     
@@ -86,15 +88,31 @@ std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::
         
         auto help_text = hbox({
             text("↑↓: Navigate  ") | color(kTextDim),
-            text("Enter: Select/Open  ") | color(kTextDim),
+            text("Enter: Play/Open  ") | color(kTextDim),
+            text("a: Queue  ") | color(kTextDim),
+            text("A: Queue folder  ") | color(kTextDim),
             text("Backspace: Parent  ") | color(kTextDim),
-            text("Q: Quit") | color(kWarning)
+            text("Q: Done") | color(kWarning)
         }) | center;
+
+        std::string queue_label = "Queue: " + std::to_string(queued_count) + " track" +
+                                  (queued_count == 1 ? "" : "s");
+        Element status_line;
+        if (!status_message.empty()) {
+            status_line = hbox({
+                text(queue_label) | color(kSuccess) | bold,
+                text("   "),
+                text(status_message) | color(kTextDim)
+            });
+        } else {
+            status_line = text(queue_label) | color(kSuccess) | bold;
+        }
         
         auto content = vbox({
             text("═══ cli-modplayer v1.3.0 ═══") | bold | color(kAccent) | center,
             separator(),
             current_path_display,
+            status_line,
             separator(),
             vbox(file_list) | yflex | bgcolor(kPanel) | vscroll_indicator | yframe | focus,
             separator(),
@@ -116,7 +134,10 @@ std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::
     component = CatchEvent(component, [&](Event event) {
         if (event == Event::Character('q') || event == Event::Character('Q') || 
             event == Event::Escape) {
-            quit = true;
+            // If nothing was queued, treat as a cancel.
+            if (result.queued_paths.empty()) {
+                quit = true;
+            }
             screen.Exit();
             return true;
         }
@@ -155,6 +176,36 @@ std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::
             browser.navigate_up();
             return true;
         }
+
+        // Add the selected entry to the queue.
+        if (event == Event::Character('a')) {
+            const auto& entries = browser.entries();
+            const std::size_t selected = browser.selected_index();
+            if (selected < entries.size()) {
+                const auto& entry = entries[selected];
+                if (entry.display_name == "..") {
+                    status_message = "Cannot queue parent entry";
+                } else {
+                    result.queued_paths.push_back(entry.path);
+                    ++queued_count;
+                    if (entry.is_directory) {
+                        status_message = "Queued folder: " + entry.display_name;
+                    } else {
+                        status_message = "Queued: " + entry.display_name;
+                    }
+                    browser.select_next();
+                }
+            }
+            return true;
+        }
+
+        // Add the entire current folder to the queue.
+        if (event == Event::Character('A')) {
+            result.queued_paths.push_back(browser.current_path());
+            ++queued_count;
+            status_message = "Queued current folder";
+            return true;
+        }
         
         if (event == Event::Return) {
             const auto& entries = browser.entries();
@@ -166,7 +217,7 @@ std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::
                 if (entry.is_directory) {
                     browser.navigate_into(selected);
                 } else {
-                    selected_file = entry.path;
+                    result.selected_file = entry.path;
                     screen.Exit();
                 }
             }
@@ -179,10 +230,22 @@ std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::
     screen.Loop(component);
     
     if (quit) {
-        return std::nullopt;
+        return FileBrowserResult{};
     }
     
-    return selected_file;
+    return result;
+}
+
+std::optional<std::filesystem::path> run_file_browser_ui(const std::filesystem::path& start_dir) {
+    auto result = run_file_browser(start_dir);
+    if (result.selected_file) {
+        return result.selected_file;
+    }
+    if (!result.queued_paths.empty()) {
+        // Caller only wants a single file; ignore queued paths here.
+        return std::nullopt;
+    }
+    return std::nullopt;
 }
 
 } 

@@ -55,6 +55,7 @@ add_executable(cli-modplayer
     src/audio_exporter.cpp
     src/file_browser.cpp
     src/file_browser_ui.cpp
+    src/playlist.cpp
     src/simple_ui.cpp
 )
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "player.hpp"
+#include "ui.hpp"
 #include <atomic>
 
 namespace tracker {
@@ -7,7 +8,7 @@ namespace tracker {
 class SimpleUi {
 public:
     SimpleUi(Player& player);
-    void run();
+    UiAction run();
 private:
     Player& player_;
     std::atomic<bool> running_{true};

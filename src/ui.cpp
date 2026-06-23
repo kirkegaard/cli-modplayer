@@ -147,10 +147,11 @@ void Ui::reset_ui_state() {
     last_state_ = TransportState{};
 }
 
-bool Ui::run() {
+UiAction Ui::run() {
     using namespace std::chrono_literals;
 
     reset_ui_state();
+    action_ = UiAction::Quit;
     auto screen = ftxui::ScreenInteractive::Fullscreen();
     std::atomic<bool> loop_running{true};
 
@@ -166,7 +167,7 @@ bool Ui::run() {
         update_visualizer_peaks(last_state_, static_cast<int>(last_state_.channels.size()));
 
         if (last_state_.finished && running_) {
-            open_new_file_ = true;
+            action_ = UiAction::NextTrack;
             running_ = false;
             loop_running = false;
             screen.Exit();
@@ -182,14 +183,31 @@ bool Ui::run() {
 
         if (event == ftxui::Event::Character('q') || event == ftxui::Event::Character('Q') ||
             event == ftxui::Event::Escape) {
+            action_ = UiAction::Quit;
             running_ = false;
             loop_running = false;
             screen.Exit();
             return true;
         }
 
-        if (event == ftxui::Event::Character('o')) {
-            open_new_file_ = true;
+        if (event == ftxui::Event::Character('o') || event == ftxui::Event::Character('O')) {
+            action_ = UiAction::OpenBrowser;
+            running_ = false;
+            loop_running = false;
+            screen.Exit();
+            return true;
+        }
+
+        if (event == ftxui::Event::Character('>') || event == ftxui::Event::Character('.')) {
+            action_ = UiAction::NextTrack;
+            running_ = false;
+            loop_running = false;
+            screen.Exit();
+            return true;
+        }
+
+        if (event == ftxui::Event::Character('<') || event == ftxui::Event::Character(',')) {
+            action_ = UiAction::PrevTrack;
             running_ = false;
             loop_running = false;
             screen.Exit();
@@ -480,7 +498,7 @@ bool Ui::run() {
     }
 
     running_ = false;
-    return open_new_file_;
+    return action_;
 }
 
 void Ui::update_history(const TransportState &state) {
@@ -1017,9 +1035,16 @@ ftxui::Element Ui::render_status_bar() {
 
 ftxui::Element Ui::render_footer() const {
     using namespace ftxui;
-    auto shortcuts = text("Space: Play/Pause  [ / ] ±8 rows  ←/→ Orders  PgUp/PgDn Channels  +/- Volume  M Mute  E Effects  X Export  N Info  A About  O Open  Q Quit") |
+    auto shortcuts = text("Space: Play/Pause  [ / ] ±8 rows  ←/→ Orders  < / > Prev/Next  PgUp/PgDn Channels  +/- Volume  M Mute  E Effects  X Export  N Info  A About  O Add  Q Quit") |
                      color(kTheme.text_dim) | dim;
-    return hbox({shortcuts}) | bgcolor(kTheme.background) | color(kTheme.text);
+    Elements row{shortcuts};
+    if (queue_total_ > 1) {
+        std::ostringstream oss;
+        oss << "Queue " << (queue_index_ + 1) << "/" << queue_total_;
+        row.push_back(filler());
+        row.push_back(text(oss.str()) | color(kTheme.accent) | bold);
+    }
+    return hbox(std::move(row)) | bgcolor(kTheme.background) | color(kTheme.text);
 }
 
 ftxui::Element Ui::render_export_dialog() {

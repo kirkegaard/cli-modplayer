@@ -20,12 +20,26 @@ struct RowRender {
     std::vector<std::string> channels;
 };
 
+// What the user/playback requested when the UI loop exits.
+enum class UiAction {
+    Quit,         // user pressed Q / Esc
+    OpenBrowser,  // user pressed O to add/browse files
+    NextTrack,    // advance to next track in the queue (also used on song finish)
+    PrevTrack,    // go to previous track in the queue
+};
+
 class Ui {
 public:
     explicit Ui(Player &player, Config &config, const std::string& module_filename = "output");
     ~Ui();
 
-    bool run();
+    UiAction run();
+
+    // Optional info shown in the footer/header about the queue position.
+    void set_queue_info(std::size_t index, std::size_t total) {
+        queue_index_ = index;
+        queue_total_ = total;
+    }
 
 private:
     void reset_ui_state();
@@ -53,7 +67,9 @@ private:
     Player &player_;
     Config &config_;
     bool running_{true};
-    bool open_new_file_{false};
+    UiAction action_{UiAction::Quit};
+    std::size_t queue_index_{0};
+    std::size_t queue_total_{0};
     bool info_overlay_{false};
     int info_scroll_position_{0};
     bool about_overlay_{false};
